@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
 
   const state = crypto.randomUUID();
   const authorizeUrl = buildAuthorizeUrl(state);
+  console.log("[auth/login] redirecionando p/ autorização:", authorizeUrl);
 
   const secureFlag = process.env.NODE_ENV === "production" ? "; Secure" : "";
   return new Response(null, {

@@ -2,6 +2,7 @@ import "server-only";
 
 import { caConfig } from "@/lib/config";
 import { getTokens, setTokens, type CaTokens } from "@/lib/contaazul/auth-store";
+import { buildAuthorizeUrl } from "@/lib/contaazul/authorize-url";
 
 /**
  * Cliente HTTP para a API v2 do Conta Azul.
@@ -28,20 +29,21 @@ interface TokenResponse {
 
 /**
  * Monta a URL de autorização OAuth2 (Authorization Code).
- * A URL oficial contém um fragmento (`#/oauth/authorize`), então os parâmetros
- * são anexados ao final dela, exatamente como na documentação da Conta Azul.
+ *
+ * A URL oficial contém um fragmento (`#/oauth/authorize`); os parâmetros são
+ * anexados ao fragmento (após o `#`), NÃO a um query string HTTP real.
+ *
+ * IMPORTANTE: dentro de um fragmento de URL, os valores dos parâmetros devem
+ * ir "brutos" (não percent-encoded), exatamente como mostra a documentação:
+ *   https://login.contaazul.com/#/oauth/authorize?response_type=code&client_id=...&redirect_uri=https://...&state=...&scope=...
+ *
+ * Usar `URLSearchParams` percent-encoda o `redirect_uri` (ex. `://` → `%3A%2F%2F`),
+ * o que faz o servidor/autorizador da Conta Azul rejeitar a requisição com
+ * `invalid_request` (parâmetros "ausentes" ou "inválidos"). Por isso montamos
+ * a string manualmente, sem URL-encode — os parâmetros aqui (client_id,
+ * redirect_uri, state, scope) são seguros para exibição bruta no fragmento.
  */
-export function buildAuthorizeUrl(state: string): string {
-  const base = caConfig.authorizeUrl;
-  const params = new URLSearchParams({
-    response_type: "code",
-    client_id: caConfig.clientId,
-    redirect_uri: caConfig.redirectUri,
-    state,
-    scope: caConfig.oauthScope,
-  });
-  return `${base}${base.includes("?") ? "&" : "?"}${params.toString()}`;
-}
+export { buildAuthorizeUrl };
 
 function basicAuthHeader(): string {
   const credentials = Buffer.from(
