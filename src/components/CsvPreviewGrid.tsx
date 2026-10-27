@@ -44,14 +44,24 @@ export function CsvPreviewGrid({
     return map;
   }, [mapping]);
 
-  const visibleRows = csvData.rows.slice(0, MAX_VISIBLE_ROWS);
+  const rowsToShow = csvData.rows
+    .map((row, index) => ({ row, index }))
+    .filter(({ index }) => !excludedRows.has(index) && !outOfDayRows.has(index));
+
+  const visibleRows = rowsToShow.slice(0, MAX_VISIBLE_ROWS);
+  const totalRows = rowsToShow.length;
 
   return (
     <div>
-      {csvData.rows.length > MAX_VISIBLE_ROWS && (
+      {totalRows > MAX_VISIBLE_ROWS && (
         <p className="mb-2 text-xs text-slate-500">
-          Exibindo as primeiras {MAX_VISIBLE_ROWS} de {csvData.rows.length} linhas —
-          todas serão processadas (respeitando o filtro do dia e as exclusões).
+          Exibindo as primeiras {MAX_VISIBLE_ROWS} de {totalRows} linhas
+          selecionadas para o dia em questão.
+        </p>
+      )}
+      {totalRows === 0 && (
+        <p className="mb-2 text-xs text-slate-500">
+          Nenhum registro selecionado para o dia em questão.
         </p>
       )}
       <div className="max-h-[480px] overflow-auto rounded-md border border-slate-200">
@@ -85,7 +95,7 @@ export function CsvPreviewGrid({
             </tr>
           </thead>
           <tbody>
-            {visibleRows.map((row, index) => {
+            {visibleRows.map(({ row, index }) => {
               const errors = rowErrors[index] ?? [];
               const excluded = excludedRows.has(index);
               const outOfDay = outOfDayRows.has(index);
@@ -109,14 +119,6 @@ export function CsvPreviewGrid({
                     ⚠ {errors.length} erro{errors.length > 1 ? "s" : ""}
                   </span>
                 );
-              } else if (outOfDay) {
-                statusCell = (
-                  <span className="font-medium text-slate-400" title="Data de pagamento diferente do dia do evento financeiro">
-                    Fora do dia
-                  </span>
-                );
-              } else if (excluded) {
-                statusCell = <span className="text-slate-400">Ignorada</span>;
               } else {
                 statusCell = <span className="text-emerald-600">Pronta</span>;
               }
@@ -126,7 +128,7 @@ export function CsvPreviewGrid({
                   key={index}
                   className={`border-b border-slate-50 last:border-0 ${
                     errors.length > 0 ? "bg-amber-50/60" : ""
-                  } ${excluded || (outOfDay && !result) ? "opacity-45" : ""}`}
+                  }`}
                 >
                   <td className="px-2 py-1.5">
                     <input
@@ -134,7 +136,7 @@ export function CsvPreviewGrid({
                       checked={!excluded}
                       onChange={() => onToggleRow(index)}
                       aria-label={`Incluir linha ${index + 1}`}
-                      disabled={Boolean(result) || (outOfDay && !result)}
+                      disabled={Boolean(result)}
                       className="h-3.5 w-3.5 accent-blue-600"
                     />
                   </td>
